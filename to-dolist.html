@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List com Tags e Prazos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Flatpickr para seleção de datas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 500: '#0ea5e9', 600: '#0284c7' },
+                        success: { 500: '#10b981' },
+                        warning: { 500: '#f59e0b' },
+                        danger: { 500: '#ef4444' },
+                        // Cores para tags
+                        tag: {
+                            trabalho: '#3b82f6',
+                            pessoal: '#10b981',
+                            estudo: '#8b5cf6',
+                            saúde: '#ec4899',
+                            outros: '#64748b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .task-overdue {
+            border-left: 4px solid #ef4444;
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+        .tag-selector {
+            display: none;
+        }
+        .tag-selector:checked + label {
+            border-width: 2px;
+            border-color: #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">To-Do List Avançada</h1>
+            <p class="text-gray-600">Organize tarefas com tags e prazos</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <!-- Formulário de Adição -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex flex-col gap-3">
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="taskInput" 
+                            placeholder="Adicione uma nova tarefa..." 
+                            class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                        <button 
+                            id="addButton"
+                            class="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                        >
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1 flex gap-2 items-center">
+                            <input 
+                                type="text" 
+                                id="dueDateInput" 
+                                placeholder="Data limite" 
+                                class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            >
+                            <button 
+                                id="clearDateBtn"
+                                class="px-3 py-2 text-gray-500 hover:text-danger-500"
+                                title="Limpar data"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex-1">
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <span class="text-sm text-gray-700">Tag:</span>
+                                <!-- Opções de Tag -->
+                                <div class="flex flex-wrap gap-1">
+                                    <input type="radio" name="tag" id="tag-trabalho" value="trabalho" class="tag-selector" checked>
+                                    <label for="tag-trabalho" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-trabalho/10 text-tag-trabalho border border-transparent cursor-pointer">Trabalho</label>
+                                    
+                                    <input type="radio" name="tag" id="tag-pessoal" value="pessoal" class="tag-selector">
+                                    <label for="tag-pessoal" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-pessoal/10 text-tag-pessoal border border-transparent cursor-pointer">Pessoal</label>
+                                    
+                                    <input type="radio" name="tag" id="tag-estudo" value="estudo" class="tag-selector">
+                                    <label for="tag-estudo" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-estudo/10 text-tag-estudo border border-transparent cursor-pointer">Estudo</label>
+                                    
+                                    <input type="radio" name="tag" id="tag-saude" value="saúde" class="tag-selector">
+                                    <label for="tag-saude" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-saúde/10 text-tag-saúde border border-transparent cursor-pointer">Saúde</label>
+                                    
+                                    <input type="radio" name="tag" id="tag-outros" value="outros" class="tag-selector">
+                                    <label for="tag-outros" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-outros/10 text-tag-outros border border-transparent cursor-pointer">Outros</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <span class="text-gray-700">Filtrar:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="filterAll" class="filter-btn active px-3 py-1 rounded-md bg-primary-500 text-white">Todas</button>
+                        <button id="filterActive" class="filter-btn px-3 py-1 rounded-md bg-gray-200 text-gray-700">Ativas</button>
+                        <button id="filterCompleted" class="filter-btn px-3 py-1 rounded-md bg-gray-200 text-gray-700">Completas</button>
+                        <button id="filterOverdue" class="filter-btn px-3 py-1 rounded-md bg-gray-200 text-gray-700">Atrasadas</button>
+                        <select id="tagFilter" class="px-3 py-1 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            <option value="">Todas tags</option>
+                            <option value="trabalho">Trabalho</option>
+                            <option value="pessoal">Pessoal</option>
+                            <option value="estudo">Estudo</option>
+                            <option value="saúde">Saúde</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Tarefas -->
+            <div class="divide-y divide-gray-200">
+                <ul id="taskList" class="divide-y divide-gray-200"></ul>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <span id="taskCount" class="text-gray-700">0 tarefas</span>
+                    <span id="overdueCount" class="ml-3 text-danger-500 hidden">0 atrasadas</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="clearCompleted" class="px-3 py-1 text-danger-500 hover:text-danger-700">Limpar completas</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Edição -->
+        <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Editar Tarefa</h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <input 
+                        type="text" 
+                        id="editInput" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                    <input 
+                        type="text" 
+                        id="editDueDate" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Data limite"
+                    >
+                    <div>
+                        <span class="text-sm text-gray-700">Tag:</span>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <input type="radio" name="editTag" id="edit-tag-trabalho" value="trabalho" class="tag-selector">
+                            <label for="edit-tag-trabalho" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-trabalho/10 text-tag-trabalho border border-transparent cursor-pointer">Trabalho</label>
+                            
+                            <input type="radio" name="editTag" id="edit-tag-pessoal" value="pessoal" class="tag-selector">
+                            <label for="edit-tag-pessoal" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-pessoal/10 text-tag-pessoal border border-transparent cursor-pointer">Pessoal</label>
+                            
+                            <input type="radio" name="editTag" id="edit-tag-estudo" value="estudo" class="tag-selector">
+                            <label for="edit-tag-estudo" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-estudo/10 text-tag-estudo border border-transparent cursor-pointer">Estudo</label>
+                            
+                            <input type="radio" name="editTag" id="edit-tag-saude" value="saúde" class="tag-selector">
+                            <label for="edit-tag-saude" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-saúde/10 text-tag-saúde border border-transparent cursor-pointer">Saúde</label>
+                            
+                            <input type="radio" name="editTag" id="edit-tag-outros" value="outros" class="tag-selector">
+                            <label for="edit-tag-outros" class="px-2 py-1 rounded-full text-xs font-medium bg-tag-outros/10 text-tag-outros border border-transparent cursor-pointer">Outros</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button id="cancelEdit" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Cancelar</button>
+                    <button id="saveEdit" class="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let tasks = [];
+        let currentFilter = 'all';
+        let currentTagFilter = '';
+        let editingTaskId = null;
+        
+        // Elementos do DOM
+        const taskInput = document.getElementById('taskInput');
+        const dueDateInput = document.getElementById('dueDateInput');
+        const addButton = document.getElementById('addButton');
+        const clearDateBtn = document.getElementById('clearDateBtn');
+        const taskList = document.getElementById('taskList');
+        const taskCount = document.getElementById('taskCount');
+        const overdueCount = document.getElementById('overdueCount');
+        const filterAll = document.getElementById('filterAll');
+        const filterActive = document.getElementById('filterActive');
+        const filterCompleted = document.getElementById('filterCompleted');
+        const filterOverdue = document.getElementById('filterOverdue');
+        const tagFilter = document.getElementById('tagFilter');
+        const clearCompleted = document.getElementById('clearCompleted');
+        const editModal = document.getElementById('editModal');
+        const editInput = document.getElementById('editInput');
+        const editDueDate = document.getElementById('editDueDate');
+        const closeModal = document.getElementById('closeModal');
+        const cancelEdit = document.getElementById('cancelEdit');
+        const saveEdit = document.getElementById('saveEdit');
+
+        // Inicializar Flatpickr
+        const datePicker = flatpickr(dueDateInput, {
+            locale: 'pt',
+            dateFormat: 'd/m/Y',
+            minDate: 'today',
+            allowInput: true
+        });
+
+        const editDatePicker = flatpickr(editDueDate, {
+            locale: 'pt',
+            dateFormat: 'd/m/Y',
+            allowInput: true
+        });
+
+        // Carregar tarefas do localStorage
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+                tasks.forEach(task => {
+                    if (task.dueDate) {
+                        task.dueDate = new Date(task.dueDate);
+                    }
+                    // Garantir que todas as tarefas tenham uma tag
+                    if (!task.tag) {
+                        task.tag = 'trabalho'; // Valor padrão
+                    }
+                });
+            }
+            updateTaskList();
+        }
+
+        // Salvar tarefas no localStorage
+        function saveTasks() {
+            const tasksToSave = tasks.map(task => {
+                const taskCopy = {...task};
+                if (taskCopy.dueDate instanceof Date) {
+                    taskCopy.dueDate = taskCopy.dueDate.toISOString();
+                }
+                return taskCopy;
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasksToSave));
+        }
+
+        // Adicionar nova tarefa
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (text) {
+                const selectedTag = document.querySelector('input[name="tag"]:checked').value;
+                
+                const newTask = {
+                    id: Date.now(),
+                    text,
+                    completed: false,
+                    dueDate: datePicker.selectedDates[0] || null,
+                    tag: selectedTag
+                };
+                
+                tasks.push(newTask);
+                taskInput.value = '';
+                datePicker.clear();
+                saveTasks();
+                updateTaskList();
+            }
+        }
+
+        // Atualizar a lista de tarefas na tela
+        function updateTaskList() {
+            // Filtrar tarefas conforme o filtro selecionado
+            let filteredTasks = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Aplicar filtro de status
+            if (currentFilter === 'all') {
+                filteredTasks = [...tasks];
+            } else if (currentFilter === 'active') {
+                filteredTasks = tasks.filter(task => !task.completed);
+            } else if (currentFilter === 'completed') {
+                filteredTasks = tasks.filter(task => task.completed);
+            } else if (currentFilter === 'overdue') {
+                filteredTasks = tasks.filter(task => {
+                    return !task.completed && 
+                           task.dueDate && 
+                           new Date(task.dueDate).setHours(0, 0, 0, 0) < today;
+                });
+            }
+            
+            // Aplicar filtro de tag
+            if (currentTagFilter) {
+                filteredTasks = filteredTasks.filter(task => task.tag === currentTagFilter);
+            }
+
+            // Ordenar tarefas
+            filteredTasks.sort((a, b) => {
+                // Tarefas atrasadas primeiro
+                const aDue = a.dueDate ? new Date(a.dueDate) : null;
+                const bDue = b.dueDate ? new Date(b.dueDate) : null;
+                
+                const aIsOverdue = aDue && aDue < today && !a.completed;
+                const bIsOverdue = bDue && bDue < today && !b.completed;
+                
+                if (aIsOverdue && !bIsOverdue) return -1;
+                if (!aIsOverdue && bIsOverdue) return 1;
+                
+                // Depois por data mais próxima
+                if (aDue && bDue) return aDue - bDue;
+                if (aDue) return -1;
+                if (bDue) return 1;
+                
+                // Por fim, sem data
+                return 0;
+            });
+
+            // Limpar a lista
+            taskList.innerHTML = '';
+
+            // Adicionar tarefas à lista
+            filteredTasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'p-4 hover:bg-gray-50';
+                li.dataset.id = task.id;
+                
+                // Verificar se a tarefa está atrasada
+                const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+                const isOverdue = dueDate && dueDate < today && !task.completed;
+                
+                if (isOverdue) {
+                    li.classList.add('task-overdue');
+                }
+                
+                // Formatar data para exibição
+                let dueDateDisplay = '';
+                if (dueDate) {
+                    dueDateDisplay = dueDate.toLocaleDateString('pt-BR');
+                    if (isOverdue) {
+                        dueDateDisplay = `<span class="text-danger-500">${dueDateDisplay} (Atrasada)</span>`;
+                    }
+                }
+
+                li.innerHTML = `
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start gap-3 flex-grow">
+                            <button class="toggle-btn p-1 rounded-full ${task.completed ? 'text-success-500' : 'text-gray-400'} hover:bg-gray-200 mt-1">
+                                <i class="fas ${task.completed ? 'fa-check-circle' : 'fa-circle'}"></i>
+                            </button>
+                            <div class="flex-grow">
+                                <div class="flex items-center gap-2">
+                                    <span class="${task.completed ? 'line-through text-gray-400' : 'text-gray-800'}">${task.text}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-tag-${task.tag}/10 text-tag-${task.tag}">${getTagName(task.tag)}</span>
+                                </div>
+                                ${dueDate ? `<div class="text-sm mt-1 ${task.completed ? 'text-gray-400' : 'text-gray-500'}">${dueDateDisplay}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="edit-btn p-1 text-gray-500 hover:text-primary-500">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="delete-btn p-1 text-gray-500 hover:text-danger-500">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                taskList.appendChild(li);
+            });
+
+            // Atualizar contadores
+            updateTaskCounters();
+        }
+
+        // Obter nome amigável para a tag
+        function getTagName(tagValue) {
+            const tags = {
+                'trabalho': 'Trabalho',
+                'pessoal': 'Pessoal',
+                'estudo': 'Estudo',
+                'saúde': 'Saúde',
+                'outros': 'Outros'
+            };
+            return tags[tagValue] || tagValue;
+        }
+
+        // Atualizar contadores de tarefas
+        function updateTaskCounters() {
+            const activeTasks = tasks.filter(task => !task.completed).length;
+            const totalTasks = tasks.length;
+            
+            taskCount.textContent = `${activeTasks}/${totalTasks} tarefas`;
+            
+            // Contar tarefas atrasadas
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const overdueTasks = tasks.filter(task => {
+                return !task.completed && 
+                       task.dueDate && 
+                       new Date(task.dueDate).setHours(0, 0, 0, 0) < today;
+            }).length;
+            
+            if (overdueTasks > 0) {
+                overdueCount.textContent = `${overdueTasks} atrasada${overdueTasks > 1 ? 's' : ''}`;
+                overdueCount.classList.remove('hidden');
+            } else {
+                overdueCount.classList.add('hidden');
+            }
+        }
+
+        // Alternar status de completude de uma tarefa
+        function toggleTask(id) {
+            const task = tasks.find(task => task.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+                updateTaskList();
+            }
+        }
+
+        // Editar tarefa
+        function editTask(id) {
+            const task = tasks.find(task => task.id === id);
+            if (task) {
+                editingTaskId = id;
+                editInput.value = task.text;
+                
+                if (task.dueDate) {
+                    editDatePicker.setDate(task.dueDate);
+                } else {
+                    editDatePicker.clear();
+                }
+                
+                // Selecionar a tag correta no modal
+                document.querySelector(`input[name="editTag"][value="${task.tag}"]`).checked = true;
+                
+                editModal.classList.remove('hidden');
+                editInput.focus();
+            }
+        }
+
+        // Salvar edição de tarefa
+        function saveEditedTask() {
+            const text = editInput.value.trim();
+            if (text && editingTaskId) {
+                const task = tasks.find(task => task.id === editingTaskId);
+                if (task) {
+                    task.text = text;
+                    task.dueDate = editDatePicker.selectedDates[0] || null;
+                    task.tag = document.querySelector('input[name="editTag"]:checked').value;
+                    saveTasks();
+                    updateTaskList();
+                }
+                closeEditModal();
+            }
+        }
+
+        // Fechar modal de edição
+        function closeEditModal() {
+            editModal.classList.add('hidden');
+            editingTaskId = null;
+            editInput.value = '';
+            editDatePicker.clear();
+        }
+
+        // Excluir tarefa
+        function deleteTask(id) {
+            if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
+                tasks = tasks.filter(task => task.id !== id);
+                saveTasks();
+                updateTaskList();
+            }
+        }
+
+        // Limpar tarefas completas
+        function clearCompletedTasks() {
+            if (confirm('Tem certeza que deseja limpar todas as tarefas completas?')) {
+                tasks = tasks.filter(task => !task.completed);
+                saveTasks();
+                updateTaskList();
+            }
+        }
+
+        // Mudar filtro de status
+        function changeFilter(filter) {
+            currentFilter = filter;
+            
+            // Atualizar botões de filtro
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-primary-500', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            });
+            
+            const activeBtn = document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', 'bg-primary-500', 'text-white');
+                activeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            }
+            
+            updateTaskList();
+        }
+
+        // Mudar filtro de tag
+        function changeTagFilter(tag) {
+            currentTagFilter = tag;
+            updateTaskList();
+        }
+
+        // Event Listeners
+        addButton.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+        
+        clearDateBtn.addEventListener('click', () => {
+            datePicker.clear();
+        });
+
+        // Delegation para botões dinâmicos
+        taskList.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            
+            const id = parseInt(li.dataset.id);
+            
+            if (e.target.closest('.toggle-btn')) {
+                toggleTask(id);
+            } else if (e.target.closest('.edit-btn')) {
+                editTask(id);
+            } else if (e.target.closest('.delete-btn')) {
+                deleteTask(id);
+            }
+        });
+
+        // Filtros
+        filterAll.addEventListener('click', () => changeFilter('all'));
+        filterActive.addEventListener('click', () => changeFilter('active'));
+        filterCompleted.addEventListener('click', () => changeFilter('completed'));
+        filterOverdue.addEventListener('click', () => changeFilter('overdue'));
+        tagFilter.addEventListener('change', (e) => changeTagFilter(e.target.value));
+
+        // Limpar completas
+        clearCompleted.addEventListener('click', clearCompletedTasks);
+
+        // Modal de edição
+        closeModal.addEventListener('click', closeEditModal);
+        cancelEdit.addEventListener('click', closeEditModal);
+        saveEdit.addEventListener('click', saveEditedTask);
+        editInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveEditedTask();
+        });
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+            
+            // Verificar tarefas atrasadas periodicamente
+            setInterval(() => {
+                updateTaskList();
+            }, 60000); // A cada minuto
+        });
+    </script>
+</body>
+</html>
